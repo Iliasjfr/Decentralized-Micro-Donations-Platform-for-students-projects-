@@ -62,6 +62,7 @@ contract MicroDons {
         emit ProjetCree(newId, msg.sender, _titre);
         return newId;
     }
+    
     function getDetails(uint256 id) external view returns (
         string memory  ,
         string memory ,
