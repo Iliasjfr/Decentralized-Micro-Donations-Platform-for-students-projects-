@@ -1,9 +1,8 @@
 import React from "react";
+import FundingProgress from "./FundingProgress";
 
 export default function ProjectCard({ projet, onClick }) {
-  const progress = projet.objectifFinancement > 0
-    ? Math.min((projet.montantCollecte / projet.objectifFinancement) * 100, 100)
-    : 0;
+  
 
   const statusColors = {
     "En cours":  "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
@@ -37,18 +36,10 @@ export default function ProjectCard({ projet, onClick }) {
       </p>
 
       {/* Progress bar */}
-      <div className="mb-3">
-        <div className="flex justify-between text-xs text-zinc-500 mb-1.5">
-          <span>{parseFloat(projet.montantCollecte).toFixed(3)} ETH collectés</span>
-          <span>{Math.round(progress)}%</span>
-        </div>
-        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full transition-all duration-700"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
+      <FundingProgress
+        montantCollecte={projet.montantCollecte}
+        objectifFinancement={projet.objectifFinancement}
+      />
 
       {/* Objectif */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-800">

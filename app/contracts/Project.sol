@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract MicroDons {
+contract Project {
 
     struct Projet {
         uint256 id;
         address payable porteur;
-        string titre;
-        string description;
+        string  titre;
+        string  description;
         uint256 objectifFinancement;
         uint256 montantCollecte;
         bool actif;
         bool fondsRetires;
+        uint256 deadline;
     }
 
 
     mapping(uint256 => Projet) public projets;
-
+    mapping(uint256 => address[]) private _donors;
 
     address public administrator;
     uint256 private _compteurId;
@@ -35,13 +36,13 @@ contract MicroDons {
     }
 
     function creerProjet(
-        string calldata _titre,
-        string calldata _description,
-        uint256 _objectif
+        string calldata titre,
+        string calldata description,
+        uint256 objectif
     ) external returns (uint256) {
 
-        require(bytes(_titre).length > 0, "Titre obligatoire");
-        require(_objectif > 0, "Objectif doit etre > 0");
+        require(bytes(titre).length > 0, "Titre obligatoire");
+        require(objectif > 0, "Objectif doit etre > 0");
 
         _compteurId++;
         uint256 newId = _compteurId;
@@ -50,16 +51,17 @@ contract MicroDons {
         projets[newId] = Projet({
             id:                  newId,
             porteur:             payable(msg.sender),
-            titre:               _titre,
-            description:         _description,
-            objectifFinancement: _objectif,
+            titre:               titre,
+            description:         description,
+            objectifFinancement: objectif,
             montantCollecte:     0,
             actif:               true,
-            fondsRetires:        false
+            fondsRetires:        false,
+            deadline: block.timestamp + 30 days
         });
 
         _tousLesIds.push(newId);
-        emit ProjetCree(newId, msg.sender, _titre);
+        emit ProjetCree(newId, msg.sender, titre);
         return newId;
     }
     
@@ -71,15 +73,16 @@ contract MicroDons {
         uint256 ,
         uint256 ,
         bool ,
-        bool )
+        bool 
+    )
         { require(id > 0 && id <= _compteurId, "Projet inexistant");
         Projet storage projet = projets[id];
         return (projet.titre, projet.description, projet.porteur , projet.objectifFinancement, projet.montantCollecte, projet.deadline, projet.actif, projet.fondsRetires);
         }
 
-    function getContributors(uint256 id) external view returns (address payable[] memory) {
+    function getdonors(uint256 id) external view returns (address[] memory) {
         require(id > 0 && id <= _compteurId, "Projet inexistant");
-        return contributors[id];
+        return _donors[id];
         }
         
     function getStatut(uint256 id) external view returns (string memory) {

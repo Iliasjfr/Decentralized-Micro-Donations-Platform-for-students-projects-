@@ -9,7 +9,7 @@ pragma solidity ^0.8.0;
 interface IProjectContract {
     struct Projet {
         uint256 id;
-        address payable porteur;
+        address  porteur;
         string titre;
         string description;
         uint256 objectifFinancement;
@@ -149,14 +149,15 @@ contract Donation {
 
         // Read project state from Person A's contract
         (
-            ,
-            ,
+            uint256 id,
             address payable porteur,
-            uint256 objectif,
+            string  titre,
+            string  description,
+            uint256 objectifFinancement,
             uint256 montantCollecte,
-            ,
             bool actif,
-            bool fondsRetires
+            bool fondsRetires,
+            uint256 deadline
         ) = IProjectContract(projectContractAddress).projets(projectId);
 
         require(porteur != address(0), "Project does not exist");
@@ -180,7 +181,7 @@ contract Donation {
         // ── Threshold check ──
         // montantCollecte is from Project.sol storage; we add our tracked amount
         uint256 combinedTotal = montantCollecte + newTotal;
-        if (!markedFunded[projectId] && combinedTotal >= objectif) {
+        if (!markedFunded[projectId] && combinedTotal >= objectifFinancement) {
             markedFunded[projectId] = true;
             emit ProjectFunded(projectId, combinedTotal);
         }
@@ -193,14 +194,15 @@ contract Donation {
      */
     function withdraw(uint256 projectId) external nonReentrant {
         (
-            ,
-            ,
-            address payable porteur,
-            uint256 objectif,
-            ,
-            ,
-            bool actif,
-            bool fondsRetires
+           uint256 id,
+           address payable porteur,
+           string  titre,
+           string  description,
+           uint256 objectifFinancement,
+           uint256 montantCollecte,
+           bool actif,
+           bool fondsRetires,
+           uint256 deadline,
         ) = IProjectContract(projectContractAddress).projets(projectId);
 
         require(porteur != address(0), "Project does not exist");

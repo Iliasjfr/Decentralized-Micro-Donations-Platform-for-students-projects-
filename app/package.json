@@ -26,6 +26,10 @@
       "react-app/jest"
     ]
   },
+  "env": {
+    "browser": true,
+    "es2020": true
+  },
   "browserslist": {
     "production": [
       ">0.2%",

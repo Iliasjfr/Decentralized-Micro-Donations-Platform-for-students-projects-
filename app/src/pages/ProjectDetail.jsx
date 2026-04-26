@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useWallet from "../hooks/useWallet";
-import CONTRACT_ABI from "../contracts/Storage.json";
+import CONTRACT_ABI from "../contracts/Project.json";
+import DonatePage from "./pages/DonatePage";
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
 
@@ -155,6 +156,12 @@ export default function ProjectDetail() {
                 />
               </div>
             </div>
+            <button
+                onClick={() => navigate(`/donate/${id}`)}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold rounded-xl text-sm transition"
+                >
+                Faire un don
+            </button>
 
             {/* Don form */}
             {statut === "En cours" && account && (
