@@ -9,7 +9,7 @@
  */
 
 const Donation = artifacts.require("Donation");
-const MicroDons = artifacts.require("MicroDons"); // Person A's contract artifact
+const Project = artifacts.require("Project"); // Person A's contract artifact
 
 module.exports = async function (deployer, network, accounts) {
   // Grab the already-deployed MicroDons instance
