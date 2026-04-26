@@ -9,7 +9,7 @@ pragma solidity ^0.8.0;
 interface IProjectContract {
     struct Projet {
         uint256 id;
-        address  porteur;
+        address payable porteur;
         string titre;
         string description;
         uint256 objectifFinancement;
@@ -30,17 +30,6 @@ interface IProjectContract {
         bool fondsRetires
     );
 
-    /// @notice Returns the project struct (used for direct mapping access)
-    function projets(uint256 id) external view returns (
-        uint256,
-        address payable,
-        string memory,
-        string memory,
-        uint256,
-        uint256,
-        bool,
-        bool
-    );
 }
 
 /**
@@ -147,18 +136,17 @@ contract Donation {
     function donate(uint256 projectId) external payable nonReentrant {
         require(msg.value > 0, "Donation must be > 0");
 
-        // Read project state from Person A's contract
+        // Read project state from Person A's contract via getDetails()
         (
-            uint256 id,
+            ,                        // titre  (ignored)
+            ,                        // description (ignored)
             address payable porteur,
-            string  titre,
-            string  description,
-            uint256 objectifFinancement,
+            uint256 objectif,
             uint256 montantCollecte,
+            ,                        // deadline (ignored)
             bool actif,
-            bool fondsRetires,
-            uint256 deadline
-        ) = IProjectContract(projectContractAddress).projets(projectId);
+            bool fondsRetires
+        ) = IProjectContract(projectContractAddress).getDetails(projectId);
 
         require(porteur != address(0), "Project does not exist");
         require(actif, "Project is not active");
@@ -181,7 +169,7 @@ contract Donation {
         // ── Threshold check ──
         // montantCollecte is from Project.sol storage; we add our tracked amount
         uint256 combinedTotal = montantCollecte + newTotal;
-        if (!markedFunded[projectId] && combinedTotal >= objectifFinancement) {
+        if (!markedFunded[projectId] && combinedTotal >= objectif) {
             markedFunded[projectId] = true;
             emit ProjectFunded(projectId, combinedTotal);
         }
@@ -194,16 +182,15 @@ contract Donation {
      */
     function withdraw(uint256 projectId) external nonReentrant {
         (
-           uint256 id,
-           address payable porteur,
-           string  titre,
-           string  description,
-           uint256 objectifFinancement,
-           uint256 montantCollecte,
-           bool actif,
-           bool fondsRetires,
-           uint256 deadline,
-        ) = IProjectContract(projectContractAddress).projets(projectId);
+            ,                        // titre (ignored)
+            ,                        // description (ignored)
+            address payable porteur,
+            ,                        // objectif (ignored)
+            ,                        // montantCollecte (ignored)
+            ,                        // deadline (ignored)
+            bool actif,
+            bool fondsRetires
+        ) = IProjectContract(projectContractAddress).getDetails(projectId);
 
         require(porteur != address(0), "Project does not exist");
         require(msg.sender == porteur, "Only project owner can withdraw");
