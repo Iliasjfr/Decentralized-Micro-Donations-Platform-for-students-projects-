@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useWallet from "../hooks/useWallet";
 import CONTRACT_ABI from "../contracts/Project.json";
-import DonatePage from "./pages/DonatePage";
+import DonatePage from "./DonatePage";
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
 

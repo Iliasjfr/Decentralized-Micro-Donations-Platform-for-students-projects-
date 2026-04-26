@@ -13,10 +13,10 @@ const Project = artifacts.require("Project"); // Person A's contract artifact
 
 module.exports = async function (deployer, network, accounts) {
   // Grab the already-deployed MicroDons instance
-  const projectInstance = await MicroDons.deployed();
+  const projectInstance = await Project.deployed();
   const projectAddress = projectInstance.address;
 
-  console.log(`\n📋 MicroDons (Project) deployed at: ${projectAddress}`);
+  console.log(`\n📋 Project (Project) deployed at: ${projectAddress}`);
   console.log(`🚀 Deploying Donation contract...\n`);
 
   await deployer.deploy(Donation, projectAddress);
