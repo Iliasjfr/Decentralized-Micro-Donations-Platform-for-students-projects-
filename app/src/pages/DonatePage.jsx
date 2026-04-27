@@ -14,6 +14,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import useContract from "../hooks/useContract";
 import DonationForm from "../components/DonationForm";
 import FundingProgress from "../components/FundingProgress";
+const CONTRACT_ABI = CONTRACT_JSON.abi;
 
 export default function DonatePage() {
   const { projectId } = useParams();

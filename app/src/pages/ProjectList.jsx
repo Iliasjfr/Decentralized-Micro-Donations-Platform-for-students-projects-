@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useWallet from "../hooks/useWallet";
 import ProjectCard from "../components/ProjectCard";
-import CONTRACT_ABI from "../contracts/Project.json";
+import CONTRACT_JSON from "../contracts/Project.json";
+const CONTRACT_ABI = CONTRACT_JSON.abi;
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
 

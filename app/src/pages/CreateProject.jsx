@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import useWallet from "../hooks/useWallet";
-import CONTRACT_ABI  from "../contracts/Project.json";
+import CONTRACT_JSON from "../contracts/Project.json";
+const CONTRACT_ABI = CONTRACT_JSON.abi;
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
 
