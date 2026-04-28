@@ -1,27 +1,13 @@
-/**
- * src/App.jsx
- *
- * Shared routing file — BOTH Person A and Person B contribute here.
- *
- * Person A owns:    /create, /projects, /project/:id, /admin
- * Person B owns:    /donate/:projectId, /my-donations, /funded
- * Shared:           / (redirects to /projects)
- *
- * ⚠️  This file requires react-router-dom v6.
- *     Run:  npm install react-router-dom web3
- */
-
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, NavLink } from "react-router-dom";
 
-// ── Person A's pages (stubs if not yet implemented by Person A) ──────────────
-// Replace these lazy imports with actual imports once Person A provides the files
+
 const CreateProject  = React.lazy(() => import("./pages/CreateProject"));
 const ProjectList    = React.lazy(() => import("./pages/ProjectList"));
 const ProjectDetail  = React.lazy(() => import("./pages/ProjectDetail"));
 const AdminPanel     = React.lazy(() => import("./pages/AdminPanel"));
 
-// ── Person B's pages ──────────────────────────────────────────────────────────
+
 const DonatePage     = React.lazy(() => import("./pages/DonatePage"));
 const MyDonations    = React.lazy(() => import("./pages/MyDonations"));
 const FundedProjects = React.lazy(() => import("./pages/FundedProjects"));

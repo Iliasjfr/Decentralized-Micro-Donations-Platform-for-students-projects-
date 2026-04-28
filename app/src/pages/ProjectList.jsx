@@ -65,6 +65,16 @@ export default function ProjectList() {
     ? projets
     : projets.filter((p) => p.statut === filter);
 
+  // Handle navigation to donate page
+  const handleDonateClick = (projectId) => {
+    navigate(`/donate/${projectId}`);
+  };
+
+  // Handle navigation to project detail page
+  const handleProjectClick = (projectId) => {
+    navigate(`/project/${projectId}`);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white px-4 py-12">
       <div className="max-w-5xl mx-auto">
@@ -136,7 +146,8 @@ export default function ProjectList() {
               <ProjectCard
                 key={projet.id}
                 projet={projet}
-                onClick={(id) => navigate(`/projet/${id}`)}
+                onClick={handleProjectClick}
+                onDonateClick={handleDonateClick}
               />
             ))}
           </div>
