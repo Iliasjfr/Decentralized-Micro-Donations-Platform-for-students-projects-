@@ -3,7 +3,9 @@ import useWallet from "../hooks/useWallet";
 import CONTRACT_JSON from "../contracts/Project.json";
 const CONTRACT_ABI = CONTRACT_JSON.abi;
 
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS =
+  process.env.REACT_APP_CONTRACT_ADDRESS ||
+  CONTRACT_JSON.networks["5777"]?.address;
 
 export default function AdminPanel() {
   const { account, web3, connect, shortAddress } = useWallet();
@@ -35,21 +37,26 @@ export default function AdminPanel() {
   const fetchProjets = async (contract) => {
     setLoading(true);
     try {
-      const c      = contract || new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-      const total  = await c.methods._compteurId().call();
-      const list   = [];
-      for (let i = 1; i <= parseInt(total); i++) {
-        const details = await c.methods.getDetails(i).call();
-        const statut  = await c.methods.getStatut(i).call();
-        list.push({
-          id:              i,
-          titre:           details[0],
-          porteur:         details[2],
-          montantCollecte: web3.utils.fromWei(details[4], "ether"),
-          actif:           details[6],
-          fondsRetires:    details[7],
-          statut,
-        });
+      const c = contract || new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+      const list = [];
+      let i = 1;
+      while (true) {
+        try {
+          const details = await c.methods.getDetails(i).call();
+          const statut  = await c.methods.getStatut(i).call();
+          list.push({
+            id:              i,
+            titre:           details[0],
+            porteur:         details[2],
+            montantCollecte: web3.utils.fromWei(details[4], "ether"),
+            actif:           details[6],
+            fondsRetires:    details[7],
+            statut,
+          });
+          i++;
+        } catch {
+          break; // stops when getDetails reverts (no more projects)
+        }
       }
       setProjets(list);
     } catch (err) {
@@ -58,7 +65,6 @@ export default function AdminPanel() {
       setLoading(false);
     }
   };
-
   const handleDesactiver = async (id) => {
     setError(null); setSuccess(null); setActionId(id);
     try {

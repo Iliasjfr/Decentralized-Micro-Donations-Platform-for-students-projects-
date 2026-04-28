@@ -3,7 +3,9 @@ import useWallet from "../hooks/useWallet";
 import CONTRACT_JSON from "../contracts/Project.json";
 const CONTRACT_ABI = CONTRACT_JSON.abi;
 
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS =
+  process.env.REACT_APP_CONTRACT_ADDRESS ||
+  CONTRACT_JSON.networks["5777"]?.address;
 
 export default function CreateProject() {
   const { account, web3, connect, shortAddress } = useWallet();

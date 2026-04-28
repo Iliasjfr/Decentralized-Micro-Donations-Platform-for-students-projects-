@@ -11,7 +11,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import useContract from "../hooks/useContract";
+import useWallet from "../hooks/useWallet";
 import DonationForm from "../components/DonationForm";
 import FundingProgress from "../components/FundingProgress";
 const CONTRACT_ABI = CONTRACT_JSON.abi;
@@ -19,8 +19,8 @@ const CONTRACT_ABI = CONTRACT_JSON.abi;
 export default function DonatePage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { projectContract, donationContract, web3, account, loading, error } =
-    useContract();
+  const projectContract  = new web3.eth.Contract(PROJECT_ABI,  PROJECT_ADDRESS);
+  const donationContract = new web3.eth.Contract(DONATION_ABI, DONATION_ADDRESS);
 
   const [project, setProject] = useState(null);
   const [raisedWei, setRaisedWei] = useState("0");

@@ -1,56 +1,61 @@
 /**
- * pages/FundedProjects.jsx
+ * pages/FundedProjects.jsx — FIXED
  *
- * Shows only projects that have reached their funding goal.
- * Restricted visibility: only shows funded projects (not active/expired).
- * Route: /funded
- *
- * Listens to ProjectFunded events to update list in real time.
+ * Fix: replaced useContract (missing hook) with useWallet + direct contract init
  */
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import useContract from "../hooks/useContract";
+import useWallet from "../hooks/useWallet";
 import FundingProgress from "../components/FundingProgress";
+import PROJECT_JSON   from "../contracts/Project.json";
+import DONATION_JSON  from "../contracts/Donation.json";
+
+const PROJECT_ABI      = PROJECT_JSON.abi;
+const DONATION_ABI     = DONATION_JSON.abi;
+const PROJECT_ADDRESS  =
+  process.env.REACT_APP_CONTRACT_ADDRESS ||
+  process.env.REACT_APP_PROJECT_CONTRACT ||
+  PROJECT_JSON.networks?.["5777"]?.address;
+const DONATION_ADDRESS =
+  process.env.REACT_APP_DONATION_CONTRACT ||
+  DONATION_JSON.networks?.["5777"]?.address;
 
 const MAX_PROJECT_SCAN = 100;
 
 export default function FundedProjects() {
   const navigate = useNavigate();
-  const { projectContract, donationContract, web3, loading, error } = useContract();
+  const { web3, connect, account, shortAddress } = useWallet();
 
-  const [projects, setProjects] = useState([]);
-  const [fetching, setFetching] = useState(true);
-  const [fetchErr, setFetchErr] = useState(null);
+  const [projects, setProjects]   = useState([]);
+  const [fetching, setFetching]   = useState(false);
+  const [fetchErr, setFetchErr]   = useState(null);
 
   const loadFunded = useCallback(async () => {
-    if (!projectContract || !donationContract) return;
+    if (!web3) return;
     setFetching(true);
     setFetchErr(null);
     try {
+      const projectContract  = new web3.eth.Contract(PROJECT_ABI,  PROJECT_ADDRESS);
+      const donationContract = new web3.eth.Contract(DONATION_ABI, DONATION_ADDRESS);
+
       const funded = [];
-      // Scan all project IDs up to MAX
-      // Production note: replace with on-chain event log query for scale
       for (let i = 1; i <= MAX_PROJECT_SCAN; i++) {
         try {
-          const isFunded = await donationContract.methods
-            .isFunded(i)
-            .call();
+          const isFunded = await donationContract.methods.isFunded(i).call();
           if (!isFunded) continue;
 
           const details = await projectContract.methods.getDetails(i).call();
-          const raised = await donationContract.methods
-            .totalRaisedPerProject(i)
-            .call();
+          const raised  = await donationContract.methods.totalRaisedPerProject(i).call();
 
           funded.push({
-            id: i,
-            titre: details[0],
-            description: details[1],
-            porteur: details[2],
-            objectif: details[3],
-            montantCollecte: details[4],
-            actif: details[6],
+            id:               i,
+            titre:            details[0],
+            description:      details[1],
+            porteur:          details[2],
+            objectif:         details[3],
+            montantCollecte:  details[4],
+            actif:            details[6],
             raisedViaDonation: raised,
           });
         } catch {
@@ -65,32 +70,43 @@ export default function FundedProjects() {
     } finally {
       setFetching(false);
     }
-  }, [projectContract, donationContract]);
+  }, [web3]);
 
   useEffect(() => {
-    if (!loading) loadFunded();
-  }, [loading, loadFunded]);
-
-  // Live event: add newly funded projects without full reload
-  useEffect(() => {
-    if (!donationContract) return;
-    const sub = donationContract.events.ProjectFunded().on("data", () => {
-      loadFunded();
-    });
-    return () => sub.unsubscribe?.();
-  }, [donationContract, loadFunded]);
+    if (web3) loadFunded();
+  }, [web3, loadFunded]);
 
   // ── Render ────────────────────────────────────────────────────────────────
-  if (loading || fetching) return <p style={styles.info}>🔄 Loading funded projects...</p>;
-  if (error) return <p style={styles.err}>❌ {error}</p>;
+  if (!web3) return (
+    <div style={styles.page}>
+      <h2 style={styles.heading}>✅ Funded Projects</h2>
+      <div style={{ textAlign: "center", paddingTop: 60 }}>
+        <p style={{ color: "#64748b", marginBottom: 16 }}>
+          Connect your wallet to view funded projects.
+        </p>
+        <button onClick={connect} style={styles.cta}>Connect MetaMask</button>
+      </div>
+    </div>
+  );
+
+  if (fetching) return <p style={styles.info}>🔄 Loading funded projects...</p>;
   if (fetchErr) return <p style={styles.err}>❌ {fetchErr}</p>;
 
   return (
     <div style={styles.page}>
-      <h2 style={styles.heading}>✅ Funded Projects</h2>
-      <p style={styles.sub}>
-        These projects have reached their funding goal and are fully financed.
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h2 style={styles.heading}>✅ Funded Projects</h2>
+          <p style={styles.sub}>
+            These projects have reached their funding goal and are fully financed.
+          </p>
+        </div>
+        {account && (
+          <div style={{ fontSize: 13, color: "#64748b" }}>
+            🟢 <span style={{ fontFamily: "monospace" }}>{shortAddress}</span>
+          </div>
+        )}
+      </div>
 
       {projects.length === 0 ? (
         <div style={styles.empty}>
@@ -121,7 +137,10 @@ export default function FundedProjects() {
                 </p>
 
                 <p style={styles.owner}>
-                  Owner: <code style={styles.addr}>{p.porteur.slice(0, 6)}...{p.porteur.slice(-4)}</code>
+                  Owner:{" "}
+                  <code style={styles.addr}>
+                    {p.porteur.slice(0, 6)}...{p.porteur.slice(-4)}
+                  </code>
                 </p>
 
                 <FundingProgress
@@ -147,9 +166,9 @@ export default function FundedProjects() {
 }
 
 const styles = {
-  page: { maxWidth: 900, margin: "0 auto", padding: "24px 16px" },
+  page:    { maxWidth: 900, margin: "0 auto", padding: "24px 16px" },
   heading: { margin: "0 0 6px", fontSize: 26, fontWeight: 700, color: "#1e293b" },
-  sub: { fontSize: 14, color: "#64748b", marginBottom: 28 },
+  sub:     { fontSize: 14, color: "#64748b", marginBottom: 28 },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
@@ -165,20 +184,17 @@ const styles = {
     flexDirection: "column",
     gap: 10,
   },
-  cardTop: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  cardTop:     { display: "flex", justifyContent: "space-between", alignItems: "center" },
   fundedBadge: {
-    fontSize: 11,
-    fontWeight: 700,
-    backgroundColor: "#dcfce7",
-    color: "#15803d",
-    padding: "3px 10px",
-    borderRadius: 99,
+    fontSize: 11, fontWeight: 700,
+    backgroundColor: "#dcfce7", color: "#15803d",
+    padding: "3px 10px", borderRadius: 99,
   },
   projectId: { fontSize: 12, color: "#94a3b8" },
   cardTitle: { margin: 0, fontSize: 17, fontWeight: 700, color: "#1e293b" },
-  cardDesc: { margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.5 },
-  owner: { margin: 0, fontSize: 12, color: "#64748b" },
-  addr: { backgroundColor: "#e0f2fe", padding: "1px 5px", borderRadius: 4, fontSize: 11 },
+  cardDesc:  { margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.5 },
+  owner:     { margin: 0, fontSize: 12, color: "#64748b" },
+  addr:      { backgroundColor: "#e0f2fe", padding: "1px 5px", borderRadius: 4, fontSize: 11 },
   viewBtn: {
     marginTop: "auto",
     background: "none",
@@ -186,8 +202,7 @@ const styles = {
     color: "#16a34a",
     padding: "7px 14px",
     borderRadius: 7,
-    fontSize: 13,
-    fontWeight: 600,
+    fontSize: 13, fontWeight: 600,
     cursor: "pointer",
   },
   empty: { textAlign: "center", padding: "60px 0", color: "#64748b" },
@@ -198,10 +213,9 @@ const styles = {
     color: "#fff",
     border: "none",
     borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 600,
+    fontSize: 14, fontWeight: 600,
     cursor: "pointer",
   },
   info: { padding: 40, textAlign: "center", color: "#64748b" },
-  err: { padding: 40, textAlign: "center", color: "#dc2626" },
+  err:  { padding: 40, textAlign: "center", color: "#dc2626" },
 };
