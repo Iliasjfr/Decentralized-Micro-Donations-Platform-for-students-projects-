@@ -25,14 +25,14 @@ export default function ProjectList() {
   }, [web3]);
 
   const fetchProjets = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-      // Fetch all project IDs via compteurId
-      const total = await contract.methods._compteurId().call();
-      const list  = [];
-      for (let i = 1; i <= parseInt(total); i++) {
+  setLoading(true);
+  setError(null);
+  try {
+    const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+    const list = [];
+    let i = 1;
+    while (true) {
+      try {
         const details = await contract.methods.getDetails(i).call();
         const statut  = await contract.methods.getStatut(i).call();
         list.push({
@@ -47,15 +47,19 @@ export default function ProjectList() {
           fondsRetires:        details[7],
           statut,
         });
+        i++;
+      } catch {
+        break; // getDetails reverts when id > _compteurId
       }
-      setProjets(list);
-    } catch (err) {
-      setError("Erreur lors du chargement des projets.");
-      console.error(err);
-    } finally {
-      setLoading(false);
     }
-  };
+    setProjets(list);
+  } catch (err) {
+    setError("Erreur lors du chargement des projets.");
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const filtered = filter === "Tous"
     ? projets

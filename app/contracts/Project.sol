@@ -20,8 +20,8 @@ contract Project {
     mapping(uint256 => address[]) private _donors;
 
     address public administrator;
-    uint256 private _compteurId;
-    uint256[] private _tousLesIds;
+    uint256 public _compteurId;
+    uint256[] public _tousLesIds;
 
     event ProjetCree(uint256 indexed id, address indexed porteur, string titre);
 
