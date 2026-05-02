@@ -1,39 +1,23 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import useWallet from "../hooks/useWallet";
-import PROJECT_JSON  from "../contracts/Project.json";
-import DONATION_JSON from "../contracts/Donation.json";
+import useContract from "../hooks/useContract";
 import FundingProgress from "../components/FundingProgress";
-
-const PROJECT_ABI      = PROJECT_JSON.abi;
-const DONATION_ABI     = DONATION_JSON.abi;
-const PROJECT_ADDRESS  =
-  process.env.REACT_APP_CONTRACT_ADDRESS ||
-  PROJECT_JSON.networks?.["5777"]?.address;
-const DONATION_ADDRESS =
-  process.env.REACT_APP_DONATION_CONTRACT ||
-  DONATION_JSON.networks?.["5777"]?.address;
-
-const MAX_PROJECT_ID_SCAN = 100;
 
 export default function MyDonations() {
   const navigate = useNavigate();
-  const { web3, account, connect, shortAddress } = useWallet();
+  const { web3, account, projectContract, donationContract, loading } = useContract();
 
   const [donations, setDonations] = useState([]);
   const [fetching, setFetching]   = useState(false);
   const [fetchErr, setFetchErr]   = useState(null);
 
   const loadDonations = useCallback(async () => {
-    if (!web3 || !account) return;
+    if (!projectContract || !donationContract || !account) return;
     setFetching(true);
     setFetchErr(null);
     try {
-      const projectContract  = new web3.eth.Contract(PROJECT_ABI,  PROJECT_ADDRESS);
-      const donationContract = new web3.eth.Contract(DONATION_ABI, DONATION_ADDRESS);
-
       const projectIds = await donationContract.methods
-        .getProjectsDonatedByUser(account, 1, MAX_PROJECT_ID_SCAN)
+        .getProjectsDonatedByUser(account, 1, 100)
         .call();
 
       const rows = await Promise.all(
@@ -69,15 +53,17 @@ export default function MyDonations() {
     } finally {
       setFetching(false);
     }
-  }, [web3, account]);
+  }, [projectContract, donationContract, account]);
 
   useEffect(() => {
-    if (web3 && account) loadDonations();
-  }, [web3, account, loadDonations]);
+    if (!loading && projectContract && donationContract && account) loadDonations();
+  }, [loading, projectContract, donationContract, account, loadDonations]);
 
   const totalEth = donations.reduce((sum, d) => {
     return sum + parseFloat(web3?.utils.fromWei(d.amount, "ether") || 0);
   }, 0);
+
+  if (loading) return <p style={styles.info}>🔄 Connecting...</p>;
 
   if (!account) return (
     <div style={styles.page}>
@@ -86,7 +72,6 @@ export default function MyDonations() {
         <p style={{ color: "#64748b", marginBottom: 16 }}>
           Please connect your wallet to view your donations.
         </p>
-        <button onClick={connect} style={styles.cta}>Connect MetaMask</button>
       </div>
     </div>
   );
