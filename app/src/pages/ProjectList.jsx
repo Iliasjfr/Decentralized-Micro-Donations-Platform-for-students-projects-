@@ -1,65 +1,60 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import useWallet from "../hooks/useWallet";
+import useContract from "../hooks/useContract";
 import ProjectCard from "../components/ProjectCard";
-import CONTRACT_JSON from "../contracts/Project.json";
-const CONTRACT_ABI = CONTRACT_JSON.abi;
-
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
 
 export default function ProjectList() {
-  const { account, web3, connect, shortAddress } = useWallet();
+  const { account, web3, projectContract, loading: contractLoading, error: contractError } = useContract();
   const navigate = useNavigate();
 
-  const [projets, setProjets]   = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState(null);
-  const [filter, setFilter]     = useState("Tous");
+  const [projets, setProjets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState(null);
+  const [filter, setFilter]   = useState("Tous");
 
   const FILTERS = ["Tous", "En cours", "Financé", "Expiré", "Clôturé"];
 
   useEffect(() => {
-    if (!web3) return;
+    if (!projectContract) return;
     fetchProjets();
     // eslint-disable-next-line
-  }, [web3]);
+  }, [projectContract]);
 
   const fetchProjets = async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-    const list = [];
-    let i = 1;
-    while (true) {
-      try {
-        const details = await contract.methods.getDetails(i).call();
-        const statut  = await contract.methods.getStatut(i).call();
-        list.push({
-          id:                  i,
-          titre:               details[0],
-          description:         details[1],
-          porteur:             details[2],
-          objectifFinancement: web3.utils.fromWei(details[3], "ether"),
-          montantCollecte:     web3.utils.fromWei(details[4], "ether"),
-          deadline:            details[5],
-          actif:               details[6],
-          fondsRetires:        details[7],
-          statut,
-        });
-        i++;
-      } catch {
-        break; // getDetails reverts when id > _compteurId
+    setLoading(true);
+    setError(null);
+    try {
+      const list = [];
+      let i = 1;
+      while (true) {
+        try {
+          const details = await projectContract.methods.getDetails(i).call();
+          const statut  = await projectContract.methods.getStatut(i).call();
+          list.push({
+            id:                  i,
+            titre:               details[0],
+            description:         details[1],
+            porteur:             details[2],
+            objectifFinancement: web3.utils.fromWei(details[3], "ether"),
+            montantCollecte:     web3.utils.fromWei(details[4], "ether"),
+            deadline:            details[5],
+            actif:               details[6],
+            fondsRetires:        details[7],
+            statut,
+          });
+          i++;
+        } catch {
+          break;
+        }
       }
+      setProjets(list);
+    } catch (err) {
+      setError("Erreur lors du chargement des projets.");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setProjets(list);
-  } catch (err) {
-    setError("Erreur lors du chargement des projets.");
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const filtered = filter === "Tous"
     ? projets
@@ -80,20 +75,14 @@ export default function ProjectList() {
           </div>
 
           {/* Wallet */}
-          {!account ? (
-            <button
-              onClick={connect}
-              className="px-5 py-2.5 rounded-xl border border-amber-500/50 text-amber-400
-                         hover:bg-amber-500/10 transition text-sm font-medium whitespace-nowrap"
-            >
-              Connecter MetaMask
-            </button>
-          ) : (
+          {account ? (
             <div className="flex items-center gap-2 text-sm text-zinc-400">
               <span className="w-2 h-2 bg-emerald-400 rounded-full" />
-              <span className="font-mono text-white">{shortAddress}</span>
+              <span className="font-mono text-white">
+                {account.slice(0, 6)}...{account.slice(-4)}
+              </span>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Filters */}
@@ -113,19 +102,19 @@ export default function ProjectList() {
         </div>
 
         {/* States */}
-        {!web3 && (
-          <div className="text-center py-24 text-zinc-500 text-sm">
-            Connectez votre portefeuille pour voir les projets.
+        {contractLoading && (
+          <div className="text-center py-24 text-zinc-500 text-sm animate-pulse">
+            Connexion au contrat...
           </div>
         )}
-        {loading && (
+        {(error || contractError) && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm mb-6">
+            {error || contractError}
+          </div>
+        )}
+        {!contractLoading && loading && (
           <div className="text-center py-24 text-zinc-500 text-sm animate-pulse">
             Chargement des projets...
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm mb-6">
-            {error}
           </div>
         )}
 
@@ -136,13 +125,13 @@ export default function ProjectList() {
               <ProjectCard
                 key={projet.id}
                 projet={projet}
-                onClick={(id) => navigate(`/projet/${id}`)}
+                onClick={(id) => navigate(`/project/${id}`)}
               />
             ))}
           </div>
         )}
 
-        {!loading && web3 && filtered.length === 0 && (
+        {!loading && !contractLoading && filtered.length === 0 && !error && !contractError && (
           <div className="text-center py-24 text-zinc-500 text-sm">
             Aucun projet trouvé pour ce filtre.
           </div>

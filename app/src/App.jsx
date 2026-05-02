@@ -60,7 +60,6 @@ export default function App() {
             <Route path="/donate/:projectId" element={<DonatePage />} />
             <Route path="/my-donations"      element={<MyDonations />} />
             <Route path="/funded"            element={<FundedProjects />} />
-
             {/* 404 */}
             <Route path="*" element={<p style={{ padding: 40, textAlign: "center" }}>404 — Page not found</p>} />
           </Routes>

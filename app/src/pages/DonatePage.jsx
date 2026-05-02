@@ -1,32 +1,19 @@
-/**
- * pages/DonatePage.jsx
- *
- * Displays a single project's details + donation form + funding progress.
- * Route: /donate/:projectId
- *
- * Reads project details from Person A's MicroDons contract.
- * Sends donation via Person B's Donation contract.
- * Listens to DonationReceived and FundsWithdrawn events.
- */
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import useWallet from "../hooks/useWallet";
+import useContract from "../hooks/useContract";
 import DonationForm from "../components/DonationForm";
 import FundingProgress from "../components/FundingProgress";
-const CONTRACT_ABI = CONTRACT_JSON.abi;
 
 export default function DonatePage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const projectContract  = new web3.eth.Contract(PROJECT_ABI,  PROJECT_ADDRESS);
-  const donationContract = new web3.eth.Contract(DONATION_ABI, DONATION_ADDRESS);
+  const { projectContract, donationContract, web3, account, loading, error } = useContract();
 
-  const [project, setProject] = useState(null);
+  const [project, setProject]     = useState(null);
   const [raisedWei, setRaisedWei] = useState("0");
-  const [funded, setFunded] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [fetchErr, setFetchErr] = useState(null);
+  const [funded, setFunded]       = useState(false);
+  const [fetching, setFetching]   = useState(true);
+  const [fetchErr, setFetchErr]   = useState(null);
 
   const id = parseInt(projectId, 10);
 
@@ -35,24 +22,20 @@ export default function DonatePage() {
     setFetching(true);
     setFetchErr(null);
     try {
-      // Read from Person A's contract
       const details = await projectContract.methods.getDetails(id).call();
       setProject({
         id,
-        titre: details[0],
-        description: details[1],
-        porteur: details[2],
-        objectif: details[3],   // Wei
+        titre:           details[0],
+        description:     details[1],
+        porteur:         details[2],
+        objectif:        details[3],
         montantCollecte: details[4],
-        deadline: details[5],
-        actif: details[6],
-        fondsRetires: details[7],
+        deadline:        details[5],
+        actif:           details[6],
+        fondsRetires:    details[7],
       });
 
-      // Read from Donation contract
-      const raised = await donationContract.methods
-        .totalRaisedPerProject(id)
-        .call();
+      const raised = await donationContract.methods.totalRaisedPerProject(id).call();
       setRaisedWei(raised);
 
       const isFunded = await donationContract.methods.isFunded(id).call();
@@ -65,47 +48,44 @@ export default function DonatePage() {
     }
   }, [projectContract, donationContract, id]);
 
-  // Initial load
   useEffect(() => {
-    if (!loading) loadData();
-  }, [loading, loadData]);
+    if (!loading && projectContract && donationContract) loadData();
+  }, [loading, projectContract, donationContract, loadData]);
 
-  // ── Event listeners ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!donationContract || !id) return;
 
-    const donationSub = donationContract.events
-      .DonationReceived({ filter: { projectId: id } })
-      .on("data", (event) => {
-        console.log("DonationReceived event:", event.returnValues);
-        setRaisedWei(event.returnValues.newTotal);
-      });
+    let donationSub, withdrawSub, fundedSub;
+    try {
+      donationSub = donationContract.events
+        .DonationReceived({ filter: { projectId: id } })
+        .on("data", (event) => setRaisedWei(event.returnValues.newTotal));
 
-    const withdrawSub = donationContract.events
-      .FundsWithdrawn({ filter: { projectId: id } })
-      .on("data", () => {
-        loadData();
-      });
+      withdrawSub = donationContract.events
+        .FundsWithdrawn({ filter: { projectId: id } })
+        .on("data", () => loadData());
 
-    const fundedSub = donationContract.events
-      .ProjectFunded({ filter: { projectId: id } })
-      .on("data", () => {
-        setFunded(true);
-      });
+      fundedSub = donationContract.events
+        .ProjectFunded({ filter: { projectId: id } })
+        .on("data", () => setFunded(true));
+    } catch (e) {
+      console.warn("Event subscription failed:", e);
+    }
 
     return () => {
-      donationSub.unsubscribe?.();
-      withdrawSub.unsubscribe?.();
-      fundedSub.unsubscribe?.();
+      if (donationSub?.unsubscribe) donationSub.unsubscribe();
+      if (withdrawSub?.unsubscribe) withdrawSub.unsubscribe();
+      if (fundedSub?.unsubscribe) fundedSub.unsubscribe();
     };
   }, [donationContract, id, loadData]);
 
-  // ── Render states ─────────────────────────────────────────────────────────
+  // ── Render guards — MUST come before any use of `project` ──
   if (loading || fetching) return <p style={styles.info}>🔄 Loading project...</p>;
-  if (error) return <p style={styles.err}>❌ Wallet error: {error}</p>;
+  if (error)    return <p style={styles.err}>❌ Wallet error: {error}</p>;
   if (fetchErr) return <p style={styles.err}>❌ {fetchErr}</p>;
   if (!project) return <p style={styles.info}>Project not found.</p>;
 
+  // Safe to use project here
   const isOwner = account?.toLowerCase() === project.porteur?.toLowerCase();
   const totalRaisedWei = BigInt(raisedWei) + BigInt(project.montantCollecte || "0");
 
@@ -114,7 +94,6 @@ export default function DonatePage() {
       <button onClick={() => navigate(-1)} style={styles.back}>← Back</button>
 
       <div style={styles.card}>
-        {/* Header */}
         <div style={styles.header}>
           <h2 style={styles.title}>{project.titre}</h2>
           <span style={{
@@ -133,7 +112,6 @@ export default function DonatePage() {
           <code style={styles.addr}>{project.porteur}</code>
         </p>
 
-        {/* Funding progress */}
         <div style={styles.progressBox}>
           <FundingProgress
             raised={totalRaisedWei.toString()}
@@ -143,7 +121,6 @@ export default function DonatePage() {
           />
         </div>
 
-        {/* Donation form – hide if closed or owner */}
         {project.actif && !isOwner && !project.fondsRetires && (
           <div style={styles.formBox}>
             <DonationForm
@@ -168,22 +145,8 @@ export default function DonatePage() {
 
 const styles = {
   page: { maxWidth: 680, margin: "0 auto", padding: "24px 16px" },
-  back: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "#6366f1",
-    fontSize: 14,
-    marginBottom: 16,
-    padding: 0,
-  },
-  card: {
-    border: "1px solid #e2e8f0",
-    borderRadius: 12,
-    padding: 28,
-    backgroundColor: "#fff",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-  },
+  back: { background: "none", border: "none", cursor: "pointer", color: "#6366f1", fontSize: 14, marginBottom: 16, padding: 0 },
+  card: { border: "1px solid #e2e8f0", borderRadius: 12, padding: 28, backgroundColor: "#fff", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 },
   title: { margin: 0, fontSize: 22, fontWeight: 700, color: "#1e293b" },
   badge: { fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99, whiteSpace: "nowrap" },

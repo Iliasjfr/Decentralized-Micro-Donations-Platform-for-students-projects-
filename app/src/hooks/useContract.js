@@ -19,7 +19,7 @@ import Web3 from "web3";
 // Adjust paths if Person A moves them elsewhere
 let MicroDonsABI, DonationABI;
 try {
-  MicroDonsABI = require("../contracts/MicroDons.json");
+  MicroDonsABI = require("../contracts/Project.json");
 } catch {
   MicroDonsABI = null;
 }
@@ -49,7 +49,10 @@ export function useContract() {
       const _web3 = new Web3(window.ethereum);
       await window.ethereum.request({ method: "eth_requestAccounts" });
       const accounts = await _web3.eth.getAccounts();
-      const networkId = await _web3.eth.net.getId();
+      const networkId = String(await _web3.eth.net.getId());
+      console.log("Network ID:", networkId);
+      console.log("Project networks in ABI:", MicroDonsABI?.networks);
+      console.log("Project address from .env:", process.env.REACT_APP_PROJECT_CONTRACT);
 
       setWeb3(_web3);
       setAccount(accounts[0]);
@@ -59,8 +62,8 @@ export function useContract() {
       if (MicroDonsABI) {
         const projectNetwork = MicroDonsABI.networks?.[networkId];
         const projectAddress =
-          projectNetwork?.address ||
-          process.env.REACT_APP_PROJECT_CONTRACT;
+          process.env.REACT_APP_PROJECT_CONTRACT ||
+          projectNetwork?.address;
 
         if (projectAddress) {
           _projectContract = new _web3.eth.Contract(
